@@ -1,4 +1,4 @@
-import { input } from "../../NEAT.js";
+import { input } from "../../../NEAT.js";
 
 const AddTodoComponent = (todos$) => {
     let inputText = "";

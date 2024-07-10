@@ -47,7 +47,7 @@ function tag(name, ...children) {
     return result;
 }
 
-const MUNDANE_TAGS = ["canvas", "h1", "h2", "h3", "p", "a", "div", "span", "select", 'button'];
+const MUNDANE_TAGS = ["canvas", "h1", "h2", "h3", "p", "a", "div", "span", "select", 'button', 'label'];
 for (let tagName of MUNDANE_TAGS) {
     let t = null;
     window[tagName] = (...children) => tag(tagName, ...children)
@@ -61,11 +61,15 @@ function input(type) {
     return tag("input").att$("type", type);
 }
 
+function inputRange(min, max, value) {
+    return tag("input").att$("type", "range").att$("min", min).att$("max", max).att$("value", value || 0);
+}
+
 function for$(items, callback) {
     if (!items || !items.value) return;
 
     // Add watcher for all reactive data
-    items.watchAll(callback);
+    //items.watchAll(callback);
 
     const fragment = document.createDocumentFragment();
     items.value.forEach((item, index) => {
@@ -97,10 +101,11 @@ class Reactive {
         const self = this;
 
         return new Proxy(target, {
-            set(obj, prop, value) {
+            set(obj, prop, value, receiver) {
+                if (!obj.hasOwnProperty(prop)) return false; // Exit early if property doesn't exist
                 const oldValue = obj[prop];
                 // Use Reflect.set to set the property value
-                const success = Reflect.set(obj, prop, value);
+                const success = Reflect.set(obj, prop, value, receiver);
 
                 // Notify change if the value actually changed
                 if (success && oldValue !== value) {
@@ -108,17 +113,18 @@ class Reactive {
                 }
 
                 // If the new value is an object, make it reactive
-                if (typeof value === 'object' && value !== null) {
+                if (typeof value === 'object' && value !== null && !value.__isProxy) {
+                    value.__isProxy = true; // Tag the proxy to prevent double-wrapping
                     obj[prop] = self._createProxy(value);
                 }
 
                 return success;
             },
             get(obj, prop) {
-                // Handle array methods that modify the array
+                // Handle native array methods that modify the array
                 if (Array.isArray(obj) && typeof obj[prop] === 'function') {
                     return function (...args) {
-                        const result = Array.prototype[prop].apply(this, args);
+                        const result = Array.prototype[prop].apply(obj, args);
                         self._notify(prop);
                         return result;
                     };
@@ -207,4 +213,4 @@ class Reactive {
 
 }
 
-export { reactive, tag, inlineStyleStringFromJSON, img, input, for$ };
+export { reactive, tag, inlineStyleStringFromJSON, img, input, inputRange, for$ };

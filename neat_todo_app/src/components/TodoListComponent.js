@@ -1,20 +1,6 @@
-import { for$ } from "../../NEAT.js";
+import { for$ } from "../../../NEAT.js";
 
 const TodoListComponent = (todos$, todo, index) => {
-    console.log("Rendering TodoListComponent for:", todos$);
-
-    const toggleTodo = (index) => {
-        todos$[index].completed = !todos$[index].completed;
-    }
-
-    const filteredTodos = () => {
-        console.log(todos$)
-        if (completedFilter === "completed") {
-            return todos$.filter(todo => todo.completed);
-        } else if (completedFilter === "incomplete") {
-            return todos$.filter(todo => !todo.completed);
-        }
-    }
     // Styling for the todo item
     const todoStyle = (todo) => ({
         display: 'flex',
