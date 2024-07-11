@@ -1,11 +1,11 @@
 const LOREM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
-const inlineStyleStringFromJSON = (str) => {
-    return JSON.stringify(str)
-        .replace(/[{}"]/g, '')              // Remove curly braces and double quotes
-        .replace(/,/g, '; ')                // Replace commas with semicolons
-        .replace(/([a-z])([A-Z])/g, '$1-$2') // Add hyphens between camelCase
-        .toLowerCase();                     // Convert to lowercas
+const formatStyleFromJSON = (obj) => {
+    return Object.entries(obj).map(([key, value]) => {
+        // Convert camelCase to kebab-case
+        const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+        return `${kebabKey}: ${value}`;
+    }).join('; ');
 }
 
 function tag(name, ...children) {
@@ -22,7 +22,7 @@ function tag(name, ...children) {
 
     result.att$ = function (name, value) {
         if (typeof value === 'object') {
-            value = inlineStyleStringFromJSON(value);
+            value = formatStyleFromJSON(value);
         }
         this.setAttribute(name, value);
         return this;
@@ -180,4 +180,4 @@ function watcher(myFunc) {
     Dep.target = null;
 }
 
-export { reactive, tag, inlineStyleStringFromJSON, img, input, inputRange, for$, watcher };
+export { reactive, tag, img, input, inputRange, for$, watcher };
