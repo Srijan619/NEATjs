@@ -66,13 +66,13 @@ function inputRange(min, max, value) {
 }
 
 function for$(items, callback) {
-    if (!items || !items.value) return;
+    if (!items) return;
 
     // Add watcher for all reactive data
     //items.watchAll(callback);
 
     const fragment = document.createDocumentFragment();
-    items.value.forEach((item, index) => {
+    items.forEach((item, index) => {
         if (item !== undefined && callback !== undefined) {
             const child = callback(item, index);
             if (child) fragment.appendChild(child);
@@ -81,136 +81,103 @@ function for$(items, callback) {
     return fragment;
 }
 
-// Simple Reactivity function
+// Simple Deep Watcher
 
-function reactive(param) {
-    return new Reactive(param)
-}
-// Reactivity class
-
-class Reactive {
-    constructor(target) {
-        this.target = target;
-        this._listeners = new Map();
-        this.value = this._createProxy(target);
-
-        return this;
+class Dep {
+    constructor() {
+        this.subscribers = []
+    }
+    depend() {
+        if (Dep.target && !this.subscribers.includes(Dep.target)) {
+            // Only if there is a target & it's not already subscribed
+            this.subscribers.push(Dep.target);
+        }
+    }
+    notify() {
+        this.subscribers.forEach(sub => sub());
     }
 
-    _createProxy(target) {
-        const self = this;
+}
 
-        return new Proxy(target, {
-            set(obj, prop, value, receiver) {
-                if (!obj.hasOwnProperty(prop)) return false; // Exit early if property doesn't exist
-                const oldValue = obj[prop];
-                // Use Reflect.set to set the property value
-                const success = Reflect.set(obj, prop, value, receiver);
+Dep.target = null;
 
-                // Notify change if the value actually changed
-                if (success && oldValue !== value) {
-                    self._notify(prop);
+function reactive(data) {
+    const deps = new Map();
+
+    function getDep(key) {
+        if (!deps.has(key)) {
+            deps.set(key, new Dep());
+        }
+        return deps.get(key);
+    }
+
+
+    function reactiveHandler(obj) {
+        if (obj && obj.__isReactive) {
+            return obj;
+        }
+
+        const handler = {
+            get(target, key) {
+                // if (typeof key === 'symbol') {
+                //     return Reflect.get(target, key);
+                // }
+
+                const dep = getDep(key);
+                dep.depend();
+                const value = target[key];
+
+                if (typeof value === 'object' && value !== null && !value.__isReactive) {
+                    return reactiveHandler(value);
                 }
-
-                // If the new value is an object, make it reactive
-                if (typeof value === 'object' && value !== null && !value.__isProxy) {
-                    value.__isProxy = true; // Tag the proxy to prevent double-wrapping
-                    obj[prop] = self._createProxy(value);
-                }
-
-                return success;
+                return value;
             },
-            get(obj, prop) {
-                // Handle native array methods that modify the array
-                if (Array.isArray(obj) && typeof obj[prop] === 'function') {
-                    return function (...args) {
-                        const result = Array.prototype[prop].apply(obj, args);
-                        self._notify(prop);
-                        return result;
-                    };
-                }
+            set(target, key, value) {
+                const oldValue = target[key];
+                const dep = getDep(key);
+                const success = Reflect.set(target, key, value);
 
-                // Make nested objects reactive
-                if (typeof obj[prop] === 'object' && obj[prop] !== null) {
-                    return self._createProxy(obj[prop]);
+                if (success && oldValue !== value) {
+                    dep.notify();
+                    if (typeof value === 'object' && value !== null) {
+                        target[key] = reactiveHandler(value);
+                    }
                 }
-
-                return obj[prop];
+                return success;
             }
-        });
-    }
+        };
 
-    _notify(prop) {
-        if (typeof prop === "object") {
-            return this._notifyAll(prop)
-        }
-        if (this._listeners.has(prop)) {
-            this._listeners.get(prop).forEach(callback => callback(this.getValue()));
-        }
-    }
+        const proxy = new Proxy(obj, handler);
+        proxy.__isReactive = true;
 
-    _notifyAllKeysOfAnObject(keys) {
-        Object.keys(keys).forEach(prop => {
-            this._notify(prop);
-        });
-    }
-    _notifyAll(value) {
-        if (Array.isArray(value)) {
-            value.forEach((_) => {
-                if (typeof _ === 'object') {
-                    this._notifyAllKeysOfAnObject(_);
-                }
+        // Special case for arrays: wrap array elements with reactive proxies
+        if (Array.isArray(obj)) {
+            obj.forEach((item, index) => {
+                obj[index] = reactiveHandler(item);
             });
-        } else if (typeof value === 'object' && value !== null) {
-            this._notifyAllKeysOfAnObject(value);
-        }
 
-    }
-
-    getValue() {
-        return this.value;
-    }
-
-    setValue(newValue) {
-        this.value = this._createProxy(newValue);
-        this._notify(this.value);
-    }
-
-    watch(prop, callback) {
-        if (!this._listeners.has(prop)) {
-            this._listeners.set(prop, []);
-        }
-        this._listeners.get(prop).push(callback);
-    }
-
-    watchAllKeysOfAnObject(keys, callback) {
-        Object.keys(keys).forEach(prop => {
-            this.watch(prop, callback); // Add callback for each property
-        });
-    }
-
-    watchAll(callback) {
-        // Iterate over all entries of the reactive object (array or object)
-        if (Array.isArray(this.value)) {
-            this.value.forEach((_) => {
-                if (typeof _ === 'object') {
-                    this.watchAllKeysOfAnObject(_, callback);
-                }
+            // Wrap array methods to ensure they notify dependencies
+            const arrayMethods = ['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse'];
+            arrayMethods.forEach(method => {
+                obj[method] = function (...args) {
+                    const result = Array.prototype[method].apply(this, args);
+                    getDep('length').notify();
+                    return result;
+                };
             });
-        } else if (typeof this.value === 'object' && this.value !== null) {
-            this.watchAllKeysOfAnObject(this.value, callback);
         }
 
-        // Watch array mutations
-        if (Array.isArray(this.value)) {
-            this.watch('push', callback);
-            this.watch('pop', callback);
-            this.watch('splice', callback);
-            this.watch('shift', callback);
-            this.watch('unshift', callback);
-        }
+        return proxy;
     }
 
+    return reactiveHandler(data);
 }
 
-export { reactive, tag, inlineStyleStringFromJSON, img, input, inputRange, for$ };
+// The code to watch to listen for reactive properties
+function watcher(myFunc) {
+    Dep.target = myFunc;
+    Dep.target();
+    Dep.target = null;
+}
+
+export { reactive, tag, inlineStyleStringFromJSON, img, input, inputRange, for$, watcher };

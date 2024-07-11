@@ -38,11 +38,8 @@ const AddTodoComponent = (todos$) => {
 
     const addTodo = () => {
         if (inputText.trim() !== "") {
-            // Retrieve the current value of todos$ using getValue()
-            const currentTodos = todos$.getValue();
-
             // Update todos$ with the new value (using setValue to trigger reactivity)
-            todos$.setValue([...currentTodos, { text: inputText, completed: false }]);
+            todos$.push({ text: inputText, completed: false });
 
             // Clear the inputText
             inputText = "";

@@ -1,14 +1,14 @@
 import AddTodoComponent from "./components/AddTodoComponent.js";
 import TodoListComponent from "./components/TodoListComponent.js";
 
-import { reactive } from "../../NEAT.js";
+import { reactive, watcher } from "../../NEAT.js";
 
 let todos$ = reactive([
     { completed: false, text: "Todo1" },
     { completed: true, text: "Todo2" }
 ]);
 
-const renderApp = () => {
+const renderTodoApp = () => {
     const r =
         div(
             AddTodoComponent(todos$),
@@ -16,9 +16,9 @@ const renderApp = () => {
     app.replaceChildren(r ? r : document.createElement('div'));
 }
 
-renderApp();
-
-todos$.watchAll(() => {
+watcher(() => {
+    console.log("TODOS changing....", todos$)
     // Whenever todos$ changes, re-render the entire application
-    renderApp();
+    renderTodoApp();
 });
+window.todos$ = todos$

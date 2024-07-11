@@ -1,6 +1,6 @@
 import { for$ } from "../../../NEAT.js";
 
-const TodoListComponent = (todos$, todo, index) => {
+const TodoListComponent = (todos$) => {
     // Styling for the todo item
     const todoStyle = (todo) => ({
         display: 'flex',
@@ -46,12 +46,12 @@ const TodoListComponent = (todos$, todo, index) => {
 
     // Mark todo as completed
     const markCompleted = (index) => {
-        todos$.value[index].completed = !todos$.value[index].completed;
+        todos$[index].completed = !todos$[index].completed;
     };
 
     // Delete todo
     const deleteTodo = (index) => {
-        todos$.value.splice(index, 1);
+        todos$.splice(index, 1);
     };
 
     const TodoListComponentFragment = (todo, index) => {
@@ -59,7 +59,7 @@ const TodoListComponent = (todos$, todo, index) => {
         return div(
             div(`${todo.text}`).att$('style', textStyle(todo)),
             button(todo.completed ? 'Undo' : 'Complete').att$('style', completeButtonStyle(todo)).onclick$(() => markCompleted(index)),
-            button('Delete').att$('style', deleteButtonStyle).onclick$(deleteTodo)
+            button('Delete').att$('style', deleteButtonStyle).onclick$(() => deleteTodo(index))
         ).att$('style', todoStyle(todo));
     }
 
