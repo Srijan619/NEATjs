@@ -9,7 +9,6 @@ const flashcards$ = reactive([
 
 const FlashcardsApp = () => {
     const appContainer = div(
-        h1('Flashcards App'),
         FlashcardsListComponent(flashcards$)
     );
     app.replaceChildren(appContainer);
