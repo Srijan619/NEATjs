@@ -8,6 +8,9 @@ const formatStyleFromJSON = (obj) => {
     }).join('; ');
 }
 
+const isObject = (value) => value !== null && typeof value === 'object';
+const isReactiveValue = (value) => isObject(value) && value.__isReactive;
+
 function tag(name, ...children) {
     // If children is effectively an empty nested array, return an empty element
     const result = document.createElement(name);
@@ -21,17 +24,40 @@ function tag(name, ...children) {
     }
 
     result.att$ = function (name, value) {
-        if (typeof value === 'object') {
+        if (isObject(value) && name === "style") {
+            // JSON style to inline style formatting
             value = formatStyleFromJSON(value);
+        }
+        if (isReactiveValue(value)) {
+            // Set reactive values properly
+            value = value.__value
         }
         this.setAttribute(name, value);
         return this;
     };
 
-    // Bind reactiveness to element
-    result.tuneIn$ = function (value) {
-        const state = reactive(value);
-        console.log(this, state);
+    // Two way binding to element (i.e data + input listener)
+    result.tuneIn$ = function (reactiveValue) {
+        // set initial value to the attribute
+        this.att$("value", reactiveValue);
+
+        // Store the element in the bindElementsMap
+        if (!bindElementsMap.has(reactiveValue)) {
+            bindElementsMap.set(reactiveValue, new Set());
+        }
+        bindElementsMap.get(reactiveValue).add(this);
+
+        this.oninput$((event) => {
+            reactiveValue.value = event.target.value;
+        })
+
+        // Need to have some sort of patch rendering logic now here?
+        // Automatically patch elements when reactive value changes
+        watcher(() => {
+            patchElements(reactiveValue);
+        });
+
+        return this;
     };
 
     result.onclick$ = function (callback) {
@@ -44,12 +70,16 @@ function tag(name, ...children) {
         return this;
     };
 
+    result.onchange$ = function (callback) {
+        this.onchange = callback;
+        return this;
+    }
+
     return result;
 }
 
 const MUNDANE_TAGS = ["canvas", "h1", "h2", "h3", "p", "a", "div", "span", "select", 'button', 'label'];
 for (let tagName of MUNDANE_TAGS) {
-    let t = null;
     window[tagName] = (...children) => tag(tagName, ...children)
 }
 
@@ -81,6 +111,19 @@ function for$(items, callback) {
     return fragment;
 }
 
+// Element patching
+
+const bindElementsMap = new Map();
+
+const patchElements = (reactiveValue) => {
+    const elements = bindElementsMap.get(reactiveValue);
+    if (elements) {
+        elements.forEach(element => {
+            element.value = reactiveValue.value;
+        });
+    }
+};
+
 // Simple Deep Watcher
 
 class Dep {
@@ -111,24 +154,41 @@ function reactive(data) {
         return deps.get(key);
     }
 
+    const wrapPrimitive = (value) => {
+        return new Proxy({ value }, primitiveHandler);
+    };
 
-    function reactiveHandler(obj) {
+    const primitiveHandler = {
+        get(target, key) {
+            if (key === '__isReactive') return true;
+            const dep = getDep('value');
+            dep.depend();
+            return target.value;
+        },
+        set(target, key, value) {
+            const dep = getDep('value');
+            const oldValue = target.value;
+            target.value = value;
+            if (oldValue !== value) {
+                dep.notify();
+            }
+            return true;
+        }
+    };
+
+    function nonPrimitiveeHandler(obj) {
         if (obj && obj.__isReactive) {
             return obj;
         }
 
         const handler = {
             get(target, key) {
-                // if (typeof key === 'symbol') {
-                //     return Reflect.get(target, key);
-                // }
-
                 const dep = getDep(key);
                 dep.depend();
                 const value = target[key];
 
-                if (typeof value === 'object' && value !== null && !value.__isReactive) {
-                    return reactiveHandler(value);
+                if (isObject(value) && !value.__isReactive) {
+                    return nonPrimitiveeHandler(value);
                 }
                 return value;
             },
@@ -139,8 +199,8 @@ function reactive(data) {
 
                 if (success && oldValue !== value) {
                     dep.notify();
-                    if (typeof value === 'object' && value !== null) {
-                        target[key] = reactiveHandler(value);
+                    if (isObject(value)) {
+                        target[key] = nonPrimitiveeHandler(value);
                     }
                 }
                 return success;
@@ -153,14 +213,15 @@ function reactive(data) {
         // Special case for arrays: wrap array elements with reactive proxies
         if (Array.isArray(obj)) {
             obj.forEach((item, index) => {
-                obj[index] = reactiveHandler(item);
+                obj[index] = nonPrimitiveeHandler(item);
             });
 
             // Wrap array methods to ensure they notify dependencies
             const arrayMethods = ['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse'];
             arrayMethods.forEach(method => {
+                const original = Array.prototype[method];
                 obj[method] = function (...args) {
-                    const result = Array.prototype[method].apply(this, args);
+                    const result = original.apply(this, args);
                     getDep('length').notify();
                     return result;
                 };
@@ -170,7 +231,15 @@ function reactive(data) {
         return proxy;
     }
 
-    return reactiveHandler(data);
+    function reactiveHandler() {
+        if (isObject(data)) {
+            return nonPrimitiveeHandler(data);
+        } else {
+            return wrapPrimitive(data);
+        }
+    }
+
+    return reactiveHandler();
 }
 
 // The code to watch to listen for reactive properties
