@@ -77,6 +77,14 @@ function img(src) {
     return tag("img").att$("src", src);
 }
 
+// All Basic Input types shortcuts
+const INPUT_TYPES = ["text", "number", "range", "password", "checkbox", "radio", "date", "email", "file", "hidden", "image", "month", "reset", "search", "submit", "tel", "time", "url", "week"];
+
+const basicInputTypes = INPUT_TYPES.reduce((acc, type) => {
+    acc[`input${type.charAt(0).toUpperCase() + type.slice(1)}`] = () => input(type);
+    return acc;
+}, {});
+
 function input(type) {
     return tag("input").att$("type", type);
 }
@@ -100,6 +108,30 @@ function for$(items, callback) {
     });
     return fragment;
 }
+
+// Export all functions, including dynamically generated input functions
+export const {
+    inputText,
+    inputNumber,
+    inputPassword,
+    inputCheckbox,
+    inputRadio,
+    inputDate,
+    inputEmail,
+    inputFile,
+    inputHidden,
+    inputImage,
+    inputMonth,
+    inputReset,
+    inputSearch,
+    inputSubmit,
+    inputTel,
+    inputTime,
+    inputUrl,
+    inputWeek
+} = basicInputTypes;
+
+export { reactive, tag, img, input, inputRange, for$, watcher };
 
 // Element patching
 
@@ -254,5 +286,3 @@ function watcher(myFunc) {
     Dep.target();
     Dep.target = null;
 }
-
-export { reactive, tag, img, input, inputRange, for$, watcher };
