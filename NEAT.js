@@ -41,21 +41,11 @@ function tag(name, ...children) {
         // set initial value to the attribute
         this.att$("value", reactiveValue);
 
-        // Store the element in the bindElementsMap
-        if (!bindElementsMap.has(reactiveValue)) {
-            bindElementsMap.set(reactiveValue, new Set());
-        }
-        bindElementsMap.get(reactiveValue).add(this);
-
-        this.oninput$((event) => {
-            reactiveValue.value = event.target.value;
+        patchAndUpdate(this, reactiveValue, () => {
+            this.oninput$((event) => {
+                reactiveValue.value = event.target.value;
+            })
         })
-
-        // Need to have some sort of patch rendering logic now here?
-        // Automatically patch elements when reactive value changes
-        watcher(() => {
-            patchElements(reactiveValue);
-        });
 
         return this;
     };
@@ -113,6 +103,7 @@ function for$(items, callback) {
 
 // Element patching
 
+// Store the element in the bindElementsMap
 const bindElementsMap = new Map();
 
 const patchElements = (reactiveValue) => {
@@ -123,6 +114,21 @@ const patchElements = (reactiveValue) => {
         });
     }
 };
+
+const patchAndUpdate = (el, reactiveValue, callback) => {
+    if (!bindElementsMap.has(reactiveValue)) {
+        bindElementsMap.set(reactiveValue, new Set());
+    }
+    bindElementsMap.get(reactiveValue).add(el);
+
+    callback() // call parent's needed action and then start watching it
+
+    // Need to have some sort of patch rendering logic now here?
+    // Automatically patch elements when reactive value changes
+    watcher(() => {
+        patchElements(reactiveValue);
+    });
+}
 
 // Simple Deep Watcher
 

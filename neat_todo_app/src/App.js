@@ -17,7 +17,6 @@ const renderTodoApp = () => {
 }
 
 watcher(() => {
-    console.log("TODOS changing....", todos$)
     // Whenever todos$ changes, re-render the entire application
     renderTodoApp();
 });
