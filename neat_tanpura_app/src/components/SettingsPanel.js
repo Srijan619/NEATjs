@@ -2,12 +2,12 @@
 import { inputRange } from '../../../NEAT.js';
 // Component for adjusting pitch and tempo
 const SettingsPanel = (tanpuraState$) => {
-    const handlePitchChange = (event) => {
-        tanpuraState$.pitch = parseFloat(event.target.value);
+    const handlePitchChange = (data) => {
+        tanpuraState$.pitch = parseFloat(data.value);
     };
 
-    const handleTempoChange = (event) => {
-        tanpuraState$.tempo = parseFloat(event.target.value);
+    const handleTempoChange = (data) => {
+        tanpuraState$.tempo = parseFloat(data.value);
     };
 
     return (
@@ -19,6 +19,5 @@ const SettingsPanel = (tanpuraState$) => {
         )
     );
 };
-
 
 export default SettingsPanel;

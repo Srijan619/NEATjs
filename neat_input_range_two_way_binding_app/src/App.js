@@ -16,4 +16,5 @@ const renderApp = () => {
     app.appendChild(r);
 };
 
+window.tempo = tempo
 renderApp();

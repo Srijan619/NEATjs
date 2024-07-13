@@ -9,7 +9,10 @@ const formatStyleFromJSON = (obj) => {
 }
 
 const isObject = (value) => value !== null && typeof value === 'object';
-const isReactiveValue = (value) => isObject(value) && value.__isReactive;
+const isString = (value) => typeof value === 'string';
+// TODO: Does this also need to take into account arrays? And second part is to check for reactive keys
+const isReactive = (value) => (isObject(value) && value.__isReactive) || (isString(value) && value === '__isReactive');
+const extractReactiveValue = (val) => val.value || val;
 
 function tag(name, ...children) {
     // If children is effectively an empty nested array, return an empty element
@@ -28,7 +31,7 @@ function tag(name, ...children) {
             // JSON style to inline style formatting
             value = formatStyleFromJSON(value);
         }
-        if (isReactiveValue(value)) {
+        if (isReactive(value)) {
             // Set reactive values properly
             value = value.__value
         }
@@ -37,13 +40,22 @@ function tag(name, ...children) {
     };
 
     // Two way binding to element (i.e data + input listener)
-    result.tuneIn$ = function (reactiveValue) {
-        // set initial value to the attribute
-        this.att$("value", reactiveValue);
+    // Receives reactiveValue
+    // attribute (what to patch, "value" always as these are for input elements only)
+    // and a callback which is null by default
+    result.tuneIn$ = function (val, callback) {
+        // set value reactive if it is not yet
+        if (!isReactive(val)) {
+            val = reactive(val);
+        }
 
-        patchAndUpdate(this, reactiveValue, () => {
+        // Set initial value to the attribute
+        this.att$("value", val);
+
+        patchAndUpdate(this, val, 'value', () => {
             this.oninput$((event) => {
-                reactiveValue.value = event.target.value;
+                val.value = event.target.value;
+                if (callback) callback(val);
             })
         })
 
@@ -138,27 +150,27 @@ export { reactive, tag, img, input, inputRange, for$, watcher };
 // Store the element in the bindElementsMap
 const bindElementsMap = new Map();
 
-const patchElements = (reactiveValue) => {
-    const elements = bindElementsMap.get(reactiveValue);
+const patchElements = (val, attribute) => {
+    const elements = bindElementsMap.get(val);
     if (elements) {
         elements.forEach(element => {
-            element.value = reactiveValue.value;
+            element.att$(attribute, extractReactiveValue(val))
         });
     }
 };
 
-const patchAndUpdate = (el, reactiveValue, callback) => {
-    if (!bindElementsMap.has(reactiveValue)) {
-        bindElementsMap.set(reactiveValue, new Set());
+const patchAndUpdate = (el, val, attribute, callback) => {
+    if (!bindElementsMap.has(val)) {
+        bindElementsMap.set(val, new Set());
     }
-    bindElementsMap.get(reactiveValue).add(el);
+    bindElementsMap.get(val).add(el);
 
-    callback() // call parent's needed action and then start watching it
+    if (callback) callback() // call parent's needed action and then start watching it
 
     // Need to have some sort of patch rendering logic now here?
     // Automatically patch elements when reactive value changes
     watcher(() => {
-        patchElements(reactiveValue);
+        patchElements(val, attribute);
     });
 }
 
@@ -198,7 +210,7 @@ function reactive(data) {
 
     const primitiveHandler = {
         get(target, key) {
-            if (key === '__isReactive') return true;
+            if (isReactive(key)) return true;
             const dep = getDep('value');
             dep.depend();
             return target.value;
@@ -215,7 +227,7 @@ function reactive(data) {
     };
 
     function nonPrimitiveeHandler(obj) {
-        if (obj && obj.__isReactive) {
+        if (isReactive(obj)) {
             return obj;
         }
 

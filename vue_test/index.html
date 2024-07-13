@@ -16,11 +16,12 @@
         const app = createApp({
             setup() {
                 // Reactive state
-                const inputValue = ref(50);
+                const inputValue = ref({ tempo: { something: 50 } });
 
 
                 const handleInputRange = (event) => {
-                    inputValue.value = event.target.value;
+                    inputValue.value.tempo.something = event.target.value;
+                    console.log(inputValue)
                 };
 
                 return { inputValue, handleInputRange };
@@ -30,7 +31,7 @@
                     // Input type text with two-way binding
                     h('input', {
                         type: 'number',
-                        value: this.inputValue,
+                        value: this.inputValue.tempo.something,
                         onInput: this.handleInputRange
                     }),
                     // Input type range with two-way binding
@@ -38,7 +39,7 @@
                         type: 'range',
                         min: 0,
                         max: 100,
-                        value: this.inputValue,
+                        value: this.inputValue.tempo.something,
                         onInput: this.handleInputRange
                     }),
                 ]);
