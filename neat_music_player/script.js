@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
         trackList.innerHTML = '';
         tracks.forEach((track, index) => {
             const trackItem = document.createElement('li');
-            trackItem.textContent = track.name;
+            trackItem.textContent = track.relativePath;
             trackItem.addEventListener('click', () => {
                 currentTrackIndex = index;
                 if (sound) sound.unload();

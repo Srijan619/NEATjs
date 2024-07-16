@@ -9,7 +9,7 @@ const PORT = 3000;
 app.use('/tracks', express.static(path.join(__dirname, 'assets/backing_tracks')));
 
 const corsOptions = {
-    origin: 'http://localhost:8080',
+    origin: 'http://localhost:56329',
 };
 // Enable CORS middleware
 app.use(cors(corsOptions)); // Use cors middleware to allow all origins
@@ -22,7 +22,11 @@ const getMp3Files = (dir, baseDir = '', files = []) => {
         if (fs.statSync(filePath).isDirectory()) {
             getMp3Files(filePath, relativePath, files);
         } else if (filePath.endsWith('.mp3')) {
-            files.push(relativePath);
+            files.push({
+                name: file,
+                relativePath: relativePath,
+                fullPath: filePath
+            });
         }
     });
     return files;
@@ -31,8 +35,9 @@ const getMp3Files = (dir, baseDir = '', files = []) => {
 // Endpoint to list MP3 files
 app.get('/api/tracks', (req, res) => {
     const tracks = getMp3Files(path.join(__dirname, 'assets/backing_tracks')).map(file => ({
-        name: path.basename(file),
-        path: `http://localhost:3000/tracks/${encodeURIComponent(file.replace(/\\/g, '/'))}`
+        name: file.name,
+        path: `http://localhost:${PORT}/tracks/${encodeURIComponent(file.relativePath)}`,
+        relativePath: file.relativePath
     }));
     res.json(tracks);
 });
