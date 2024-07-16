@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Music Player</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+
+<body>
+    <div class="player-container">
+        <div class="player">
+            <div class="track-info">
+                <h2 id="track-title">Track Title</h2>
+            </div>
+            <div id="time-container">
+                <span id="current-time">0:00</span>
+                <span id="end-time">0:00</span>
+            </div>
+            <div id="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+            <div class="controls">
+                <button id="play-button" class="control-button">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button id="pause-button" class="control-button">
+                    <i class="fas fa-pause"></i>
+                </button>
+            </div>
+        </div>
+        <div class="track-list-container">
+            <ul id="track-list" class="track-list"></ul>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,135 @@
+/* styles.css */
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f0f0;
+}
+
+.player-container {
+    display: flex;
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 0.5s ease-in-out;
+    width: 600px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.playing {
+    background-color: #f0f0f0;
+    font-weight: bold;
+}
+
+.player {
+    padding: 20px;
+    text-align: center;
+    width: 300px;
+}
+
+#time-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+#progress-container {
+    flex: 1;
+    height: 20px;
+    background-color: #ddd;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px;
+    position: relative;
+    cursor: pointer;
+}
+
+#progress-bar {
+    width: 0;
+    height: 100%;
+    background-color: #4caf50;
+    transition: width 0.1s;
+}
+
+#current-time {
+    margin-bottom: 10px;
+}
+
+#time-container {
+    display: flex;
+    justify-content: space-between;
+    margin: 1rem;
+}
+
+.track-info {
+    margin-bottom: 20px;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.control-button {
+    background-color: #4caf50;
+    border: none;
+    border-radius: 50%;
+    color: #ffffff;
+    padding: 10px;
+    margin: 0 10px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.control-button:hover {
+    background-color: #4caf4f5a;
+}
+
+#pause-button {
+    display: none;
+}
+
+.track-list-container {
+    overflow-y: auto;
+    width: 300px;
+    border-left: 1px solid #cccccc;
+    max-height: 300px;
+    overflow: scroll;
+}
+
+.track-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.track-list li {
+    padding: 15px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.track-list li:hover {
+    background-color: #f0f0f0;
+}
+
+.track-list li.active {
+    background-color: #007bff;
+    color: #ffffff;
+}
