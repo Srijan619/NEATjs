@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "watch": "nodemon --watch '*.ts' --watch '*.neat' --ext neat,ts --exec node --loader ts-node/esm index.ts"
+    "watch": "nodemon --watch '*.mts' --watch '*.neat' --ext neat,ts,mts --exec node --loader ts-node/esm index.mts"
   },
   "keywords": [],
   "author": "",

@@ -7,8 +7,7 @@
 </script>
 
 <fragment>
-    <input tune:in="count" />
-    <p>{{ text }}</p>
+    <p>Simple paragraph</p>
 </fragment>
 
 <style>

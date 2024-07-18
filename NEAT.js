@@ -14,7 +14,7 @@ const isString = (value) => typeof value === 'string';
 const isReactive = (value) => (isObject(value) && value.__isReactive) || (isString(value) && value === '__isReactive');
 const extractReactiveValue = (val) => val.value || val;
 
-function tag(name, ...children) {
+export function tag(name, ...children) {
     // If children is effectively an empty nested array, return an empty element
     const result = document.createElement(name);
 
@@ -120,30 +120,6 @@ function for$(items, callback) {
     });
     return fragment;
 }
-
-// Export all functions, including dynamically generated input functions
-export const {
-    inputText,
-    inputNumber,
-    inputPassword,
-    inputCheckbox,
-    inputRadio,
-    inputDate,
-    inputEmail,
-    inputFile,
-    inputHidden,
-    inputImage,
-    inputMonth,
-    inputReset,
-    inputSearch,
-    inputSubmit,
-    inputTel,
-    inputTime,
-    inputUrl,
-    inputWeek
-} = basicInputTypes;
-
-export { reactive, tag, img, input, inputRange, for$, watcher };
 
 // Element patching
 
@@ -298,3 +274,27 @@ function watcher(myFunc) {
     Dep.target();
     Dep.target = null;
 }
+
+// Export all functions, including dynamically generated input functions
+// export const {
+//     inputText,
+//     inputNumber,
+//     inputPassword,
+//     inputCheckbox,
+//     inputRadio,
+//     inputDate,
+//     inputEmail,
+//     inputFile,
+//     inputHidden,
+//     inputImage,
+//     inputMonth,
+//     inputReset,
+//     inputSearch,
+//     inputSubmit,
+//     inputTel,
+//     inputTime,
+//     inputUrl,
+//     inputWeek
+// } = basicInputTypes;
+
+// export { reactive, tag, img, input, inputRange, for$, watcher };
