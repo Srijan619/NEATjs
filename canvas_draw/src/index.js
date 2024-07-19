@@ -1,213 +1,65 @@
-"use strict";
-var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
-    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
-};
-var _MainCanvas_instances, _MainCanvas_initMainCanvas;
-var ComponentType;
-(function (ComponentType) {
-    ComponentType[ComponentType["Rect"] = 0] = "Rect";
-    ComponentType[ComponentType["Circle"] = 1] = "Circle";
-    ComponentType[ComponentType["Line"] = 2] = "Line"; // Add more as needed
-})(ComponentType || (ComponentType = {}));
-class MainCanvas {
-    constructor(canvasElement) {
-        _MainCanvas_instances.add(this);
-        this.components = [];
-        this.scale = 1;
-        this.dragTarget = null;
-        this.canvasElement = canvasElement;
-        const res = canvasElement.getContext('2d');
-        if (res) {
-            this.canvasContext = res;
-        }
-        __classPrivateFieldGet(this, _MainCanvas_instances, "m", _MainCanvas_initMainCanvas).call(this);
-        this.initEventListeners();
-    }
-    addComponent(component) {
-        this.components.push(component);
-    }
-    setScale(newScale) {
-        this.scale = newScale;
-        this.components.forEach(component => component.setScale(newScale));
-        this.updateCanvas();
-    }
-    updateCanvas() {
-        this.canvasContext.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
-        this.canvasContext.save();
-        this.canvasContext.scale(this.scale, this.scale);
-        this.components.forEach(component => component.updateCanvas());
-        this.canvasContext.restore();
-    }
-    initEventListeners() {
-        this.canvasElement.addEventListener('wheel', (event) => this.handleZoom(event));
-        this.canvasElement.addEventListener('mousedown', (event) => this.handleMouseDown(event));
-        this.canvasElement.addEventListener('mousemove', (event) => this.handleMouseMove(event));
-        this.canvasElement.addEventListener('mouseup', () => this.handleMouseUp());
-    }
-    handleZoom(event) {
-        event.preventDefault();
-        const zoomIntensity = 0.1;
-        const { offsetX, offsetY, deltaY } = event;
-        const scaleFactor = deltaY < 0 ? (1 + zoomIntensity) : (1 - zoomIntensity);
-        // Calculate the new scale
-        const newScale = this.scale * scaleFactor;
-        // Update the scale
-        this.setScale(newScale);
-    }
-    handleMouseDown(event) {
-        console.log("Mouse down...", event);
-        for (const component of this.components) {
-            if (component.testHit(event)) {
-                console.log("Mouse hit compone..", component);
-                this.dragTarget = component;
-                break;
-            }
-        }
-    }
-    handleMouseMove(event) {
-        if (!this.dragTarget)
-            return;
-        const cursorMousePosition = this.dragTarget.getCursorPosition(event);
-        this.dragTarget.setPosition(cursorMousePosition.x, cursorMousePosition.y);
-        this.updateCanvas();
-    }
-    handleMouseUp() {
-        this.dragTarget = null;
-    }
-}
-_MainCanvas_instances = new WeakSet(), _MainCanvas_initMainCanvas = function _MainCanvas_initMainCanvas() {
-    const ratio = window.devicePixelRatio || 1;
-    const width = window.innerWidth * ratio;
-    const height = window.innerHeight * ratio;
-    this.canvasElement.width = width;
-    this.canvasElement.height = height;
-    this.canvasContext.fillStyle = "#f0f0f0";
-    this.canvasContext.fillRect(0, 0, this.canvasElement.width, this.canvasElement.height);
-};
-class CanvasBaseComponent {
-    constructor(canvasElement, posX, posY, width, height, color, lineWidth, scale) {
-        this.selected = false;
-        this.canvasElement = canvasElement;
-        const res = canvasElement.getContext('2d');
-        if (res) {
-            this.canvasContext = res;
-        }
-        this.posX = posX;
-        this.posY = posY;
-        this.width = width;
-        this.height = height;
-        this.color = color;
-        this.radius = this.width / 2;
-        this.lineWidth = lineWidth || .1;
-        this.scale = scale || 1;
-    }
-    setScale(newScale) {
-        this.scale = newScale;
-    }
-    setPosition(x, y) {
-        this.posX = x;
-        this.posY = y;
-    }
-    getCursorPosition(event) {
-        var rect = this.canvasElement.getBoundingClientRect();
-        return {
-            x: (event.clientX - rect.left) / (rect.right - rect.left) * this.canvasElement.width,
-            y: (event.clientY - rect.top) / (rect.bottom - rect.top) * this.canvasElement.height
-        };
-    }
-}
-class Rectangle extends CanvasBaseComponent {
-    constructor(canvasElement, posX, posY, width, height, color) {
-        super(canvasElement, posX, posY, width, height, color);
-    }
-    draw() {
-        console.log("Drawing..", this.posX, this.selected);
-        this.canvasContext.fillStyle = this.color;
-        this.canvasContext.fillRect(this.posX, this.posY, this.width, this.height);
-        // Toggle select too and continue if it was selected
-        if (this.selected)
-            return this.select('black', this.lineWidth);
-    }
-    updateCanvas() {
-        this.canvasContext.clearRect(0, 0, this.canvasContext.canvas.width, this.canvasContext.canvas.height);
-        this.draw();
-    }
-    toggleSelect(strokeStyle, lineWidth) {
-        if (this.selected)
-            return this.unselect();
-        this.select(strokeStyle, lineWidth);
-    }
-    select(strokeStyle, lineWidth) {
-        this.lineWidth = lineWidth ? lineWidth : this.lineWidth;
-        this.canvasContext.strokeStyle = strokeStyle;
-        this.canvasContext.lineWidth = this.lineWidth;
-        this.canvasContext.strokeRect(this.posX, this.posY, this.width, this.height);
-        this.selected = true;
-    }
-    unselect() {
-        this.clearStrokeArea();
-        this.draw();
-        this.selected = false;
-    }
-    clearStrokeArea() {
-        const buffer = this.lineWidth * 1.5; // Extra buffer to ensure complete clearing
-        this.canvasContext.clearRect(this.posX - buffer, this.posY - buffer, this.width + buffer * 2, this.height + buffer * 2);
-    }
-    testHit(event) {
-        const mousePosition = this.getCursorPosition(event);
-        return (this.posX <= mousePosition.x && mousePosition.x <= this.posX + this.width) &&
-            (this.posY <= mousePosition.y && mousePosition.y <= this.posY + this.height);
-    }
-}
-class Circle extends CanvasBaseComponent {
-    constructor(canvasElement, posX, posY, width, height, color, radius) {
-        super(canvasElement, posX, posY, width, height, color);
-        this.radius = radius;
-    }
-    draw() {
-        this.canvasContext.fillStyle = this.color;
-        this.canvasContext.beginPath();
-        this.canvasContext.arc(this.posX, this.posY, this.radius, 0, Math.PI * 2);
-        this.canvasContext.fill();
-    }
-    updateCanvas() {
-        this.canvasContext.clearRect(0, 0, this.canvasContext.canvas.width, this.canvasContext.canvas.height);
-        this.draw();
-    }
-    toggleSelect(strokeStyle, lineWidth) {
-        if (this.selected)
-            return this.unselect();
-        this.select(strokeStyle, lineWidth);
-    }
-    select(strokeStyle, lineWidth) {
-        this.lineWidth = lineWidth ? lineWidth : this.lineWidth;
-        this.canvasContext.strokeStyle = strokeStyle;
-        this.canvasContext.lineWidth = this.lineWidth;
-        this.canvasContext.stroke();
-        this.selected = true;
-    }
-    unselect() {
-        this.clearStrokeArea();
-        this.selected = false;
-    }
-    clearStrokeArea() {
-        this.select(this.color, this.lineWidth * 2);
-    }
-    testHit(event) {
-        const mousePosition = this.getCursorPosition(event);
-        return Math.pow(this.posX - mousePosition.x, 2) + Math.pow(this.posY - mousePosition.y, 2) <= Math.pow(this.radius, 2);
-    }
-}
+import { MainCanvas, Rectangle, Circle, TextComponent } from "./canvas.js";
 const mainCanvasElement = document.getElementById('canvas');
 const mainCanvas = new MainCanvas(mainCanvasElement);
 // const components = [] as CanvasBaseComponent[];
 // Example usage
-let rectComponentYellow = new Rectangle(mainCanvasElement, 50, 50, 500, 250, 'yellow');
-mainCanvas.addComponent(rectComponentYellow);
+// Basic shadow
+const basicShadowProps = () => [
+    'rgba(0, 0, 0, 0.5)',
+    10,
+    5,
+    5
+];
+// Board 1
+const board1 = new Rectangle(mainCanvasElement, 1000, 500, '#1A5653', 50, 50); // Forest green
+const note = new Rectangle(mainCanvasElement, 400, 200, '#ECF87F', 10, 10);
+const pinItem1 = new Circle(mainCanvasElement, 7, 'red', 410, 10);
+const pinItem2 = new Circle(mainCanvasElement, 7, 'red', 10, 10);
+const pinItem3 = new Circle(mainCanvasElement, 7, 'red', 10, 210);
+const pinItem4 = new Circle(mainCanvasElement, 7, 'red', 410, 210);
+const sheldonSays = "Scissors cuts paper, paper covers rock, rock crushes lizard, lizard poisons Spock, Spock smashes scissors, scissors decapitates lizard, lizard eats paper, paper disproves Spock, Spock vaporizes rock, and as it always has, rock crushes scissors.";
+const noteText = new TextComponent(mainCanvasElement, sheldonSays, 300, 20, 20);
+note.setShadow(...basicShadowProps());
+board1.addComponent(note);
+board1.addComponent(pinItem1);
+// board1.addComponent(pinItem2);
+// board1.addComponent(pinItem3);
+// board1.addComponent(pinItem4);
+note.addComponent(noteText);
+// Board 2
+// const board2 = new Rectangle(mainCanvasElement, 1000, 500, '#1A5653', 1060, 550); // Forest green
+// const note2 = new Rectangle(mainCanvasElement, 600, 400, '#ECF87F', 10, 10);
+// const pinItem2 = new Circle(mainCanvasElement, 7, 'red', 610, 10);
+// const sheldonSays2 = "Sheldon: Thank you, Dr. Fowler. I have a very long and somewhat self-centered speech here. But I'd like to set it aside. Penny: Yeah!Howard: Way to go! Sheldon: Because this honor doesn't just belong to me. I wouldn't be up here if it weren't for some very important people in my life. Beginning with my mother, father, meemaw, brother and sister. And my other family, who I'm so happy to have here with us. Is that Buffy the Vampire Slayer? I was under a misapprehension that my accomplishments were mine alone. Nothing could be further from the truth. I have been encouraged, sustained, inspired and tolerated not only by my wife, but by the greatest group of friends anyone ever had. I'd like to ask them to stand. Dr. Rajesh Koothrappali. Dr. Bernadette Rostenkowski-Wolowitz. Astronaut Howard Wolowitz. And my two dearest friends in the world, Penny Hofstadter and Dr. Leonard Hofstadter. I was there the moment Leonard and Penny met. He said to me that their babies would be smart and beautiful. And now that they're expecting, I have no doubt that that will be the case.Penny: Thanks, Sheldon. I-I haven't told my parents yet, but thanks.Sheldon: Oh. I'm sorry. Don't tell anyone that last thing. That's a secret.Howard, Bernadette, Raj, Penny, Leonard, I apologize if I haven't been the friend you deserve. But I want you to know in my way, I love you all. And I love you. Thank you."
+// const noteText2 = new TextComponent(mainCanvasElement, sheldonSays2, 500, 20, 20);
+// note2.setShadow(...basicShadowProps());
+// board2.addComponent(note2);
+// board2.addComponent(pinItem2);
+// note2.addComponent(noteText2);
+// Main canvas
+mainCanvas.addComponent(board1);
+// mainCanvas.addComponent(board2);
 mainCanvas.updateCanvas();
-//const circleComponent = new Circle(mainCanvas, 50, 50, 100, 50, 'yellow', 25);
 //rectComponentYellow.draw();
+// for (let i = 0; i < 2; i++) {
+//     const randomX = rand(10, (window.innerWidth - 10));
+//     const randomY = rand(10, (window.innerHeight - 10));
+//     const randomWidth = rand(10, 500);
+//     const randomHeight = rand(10, 250);
+//     //const rect = 
+//     const rect = new Rectangle(mainCanvasElement, randomX, randomY, randomWidth, randomHeight, get_random_color());
+//     mainCanvas.addComponent(rect);
+//     // mainCanvas.addComponent(new Circle(mainCanvasElement, randomX, randomY, randomWidth, randomHeight, get_random_color()));
+// }
+// mainCanvas.updateCanvas();
+// function rand(min: number, max: number) {
+//     return min + Math.random() * (max - min);
+// }
+// function get_random_color() {
+//     var h = rand(1, 360);
+//     var s = rand(0, 100);
+//     var l = rand(0, 100);
+//     return 'hsl(' + h + ',' + s + '%,' + l + '%)';
+// }
 //circleComponent.draw();
 //components.push(rectComponentYellow, circleComponent);
