@@ -14,12 +14,22 @@ const isString = (value) => typeof value === 'string';
 const isReactive = (value) => (isObject(value) && value.__isReactive) || (isString(value) && value === '__isReactive');
 const extractReactiveValue = (val) => val.value || val;
 
-export function tag(name, ...children) {
+function canHaveValueAttribute(element) {
+  return 'value' in element;
+}
+
+function tag(name, ...children) {
     // If children is effectively an empty nested array, return an empty element
     const result = document.createElement(name);
 
     for (const child of children) {
-        if (typeof child === 'string') {
+        if (isReactive(child)){
+           const reactiveValue = extractReactiveValue(child);
+           result.appendChild(document.createTextNode(reactiveValue));
+           const s = bindElementsMap.get(child);
+           s?.add(result);
+        }
+        else if (typeof child === 'string') {
             result.appendChild(document.createTextNode(child));
         } else if (child instanceof Node) {
             result.appendChild(child);
@@ -77,10 +87,11 @@ export function tag(name, ...children) {
         return this;
     }
 
+
     return result;
 }
 
-const MUNDANE_TAGS = ["canvas", "h1", "h2", "h3", "p", "a", "div", "span", "select", 'button', 'label'];
+const MUNDANE_TAGS = ["canvas", "h1", "h2", "h3", "p", "a", "div", "span", 'button', 'label'];
 for (let tagName of MUNDANE_TAGS) {
     window[tagName] = (...children) => tag(tagName, ...children)
 }
@@ -105,6 +116,30 @@ function inputRange(min, max, value) {
     return tag("input").att$("type", "range").att$("min", min).att$("max", max).att$("value", value || 0);
 }
 
+function select(options, defaultTextContent) {
+    const select = tag("select");
+    options.forEach(option =>{
+       const optionEl = tag("option");
+       optionEl.att$("value", option.value);
+       optionEl.textContent = option.displayText;
+       if(option.value === extractReactiveValue(defaultTextContent)){
+         optionEl.selected = true;
+       }
+       select.appendChild(optionEl);
+    })
+
+    select.value = extractReactiveValue(defaultTextContent);
+
+    patchAndUpdate(select, options, 'value', () => {
+      select.onchange$((event) => {
+        const s = bindElementsMap.get(defaultTextContent)
+        defaultTextContent.value = event.target.value;
+      })
+    })
+
+    return select;
+}
+
 function for$(items, callback) {
     if (!items) return;
 
@@ -126,16 +161,22 @@ function for$(items, callback) {
 // Store the element in the bindElementsMap
 const bindElementsMap = new Map();
 
+// attribute by default is of type 'value'
 const patchElements = (val, attribute) => {
     const elements = bindElementsMap.get(val);
     if (elements) {
         elements.forEach(element => {
-            element.att$(attribute, extractReactiveValue(val))
+            if(canHaveValueAttribute(element)){
+                element.att$(attribute, val)
+            } else {
+                element.textContent = extractReactiveValue(val);
+            }
         });
     }
 };
 
 const patchAndUpdate = (el, val, attribute, callback) => {
+    if(!val || !val.length) return;
     if (!bindElementsMap.has(val)) {
         bindElementsMap.set(val, new Set());
     }
@@ -276,25 +317,25 @@ function watcher(myFunc) {
 }
 
 // Export all functions, including dynamically generated input functions
-// export const {
-//     inputText,
-//     inputNumber,
-//     inputPassword,
-//     inputCheckbox,
-//     inputRadio,
-//     inputDate,
-//     inputEmail,
-//     inputFile,
-//     inputHidden,
-//     inputImage,
-//     inputMonth,
-//     inputReset,
-//     inputSearch,
-//     inputSubmit,
-//     inputTel,
-//     inputTime,
-//     inputUrl,
-//     inputWeek
-// } = basicInputTypes;
+export const {
+     inputText,
+     inputNumber,
+     inputPassword,
+     inputCheckbox,
+     inputRadio,
+     inputDate,
+     inputEmail,
+     inputFile,
+     inputHidden,
+     inputImage,
+     inputMonth,
+     inputReset,
+     inputSearch,
+     inputSubmit,
+     inputTel,
+     inputTime,
+     inputUrl,
+     inputWeek
+ } = basicInputTypes;
 
-// export { reactive, tag, img, input, inputRange, for$, watcher };
+ export { reactive, tag, img, input, inputRange, select, for$, watcher };
