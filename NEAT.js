@@ -19,7 +19,7 @@ function canHaveValueAttribute(element) {
 }
 
 function tag(name, ...children) {
-  // If children is effectively an empty nested array, return an empty element
+  //TODO: If children is effectively an empty nested array, return an empty element
   const result = document.createElement(name);
 
   for (const child of children) {
